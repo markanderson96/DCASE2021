@@ -37,19 +37,19 @@ def create_labels(df_pos, feature, glob_cls_name, train_file, seg_len, hop_seg, 
     # pick up the global class name
 
     if 'CALL' in df_pos.columns:
-        cls_list = [glob_cls_name] * len(start_time)
+        class_list = [glob_cls_name] * len(start_time)
     else:
-        cls_list = [df_pos.columns[(df_pos == 'POS').loc[index]].values for index, row in df_pos.iterrows()]
-        cls_list = list(chain.from_iterable(cls_list))
+        class_list = [df_pos.columns[(df_pos == 'POS').loc[index]].values for index, row in df_pos.iterrows()]
+        class_list = list(chain.from_iterable(class_list))
 
     assert len(start_time) == len(end_time)
-    assert len(cls_list) == len(start_time)
+    assert len(class_list) == len(start_time)
 
     for index in range(len(start_time)):
 
         str_ind = start_time[index]
         end_ind = end_time[index]
-        label = cls_list[index]
+        label = class_list[index]
 
         # Extract segment and move forward with hop_seg
 
@@ -161,7 +161,7 @@ def featureExtract(conf=None,mode=None):
             data, sr = torchaudio.load(audio_path)
             resample = T.Resample(sr, conf.features.sample_rate)
             data = resample(data)
-            spectrogram = T.Spectrogram(
+            spectrogram = T.MelSpectrogram(
                 n_fft=conf.features.n_fft,
                 hop_length=conf.features.hop,
                 window_fn=(torch.hamming_window),
@@ -239,7 +239,7 @@ def featureExtract(conf=None,mode=None):
             data, sr = torchaudio.load(audio_path)
             resample = T.Resample(sr, conf.features.sample_rate)
             data = resample(data)
-            spectrogram = T.Spectrogram(
+            spectrogram = T.MelSpectrogram(
                 n_fft=conf.features.n_fft,
                 hop_length=conf.features.hop,
                 window_fn=(torch.hamming_window),
