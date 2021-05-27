@@ -24,7 +24,6 @@ def prototypical_loss_fn(Y_in, Y_target, conf):
     q_samples = Y_in.cpu()[q_idxs]
 
     dists = euclidean_dist(q_samples, prototypes)
-    #breakpoint()
     log_p_y = F.log_softmax(-dists, dim=1).view(n_classes, n_query, -1)
 
     target_idxs = torch.arange(0, n_classes)

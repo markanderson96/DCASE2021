@@ -45,7 +45,6 @@ def train(model, train_loader, val_loader, num_batches_train, num_batches_val, c
             Y = Y.to(device)
             
             Y_out = model(X)
-            #breakpoint()
             train_loss, train_acc = loss_fn(Y_out, Y, conf)
             train_loss_list.append(train_loss.item())
             train_acc_list.append(train_acc.item())

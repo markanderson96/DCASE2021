@@ -21,6 +21,6 @@ class Protonet(nn.Module):
         (num_samples, seq_len, fft_bins) = x.shape
         x = x.view(-1, 1, seq_len, fft_bins)
         x = self.encoder(x)
-        breakpoint()
+        
         return x.view(x.size(0), -1)
         
