@@ -1,6 +1,5 @@
-import yaml
-import csv
 import os
+import logging
 import hydra
 import h5py
 import torch
@@ -32,14 +31,14 @@ def main(conf: DictConfig):
         os.makedirs(conf.path.feat_eval)
 
     if conf.set.features:
-        print("### Feature Extraction ###")
+        logger.info("### Feature Extraction ###")
         Num_extract_train, data_shape = featureExtract(conf=conf,mode="train")
-        print("Shape of dataset is {}".format(data_shape))
-        print("Total training samples is {}".format(Num_extract_train))
+        logger.info("Shape of dataset is {}".format(data_shape))
+        logger.info("Total training samples is {}".format(Num_extract_train))
 
         Num_extract_eval = featureExtract(conf=conf,mode='eval')
-        print("Total number of samples used for evaluation: {}".format(Num_extract_eval))
-        print("### Feature Extraction Complete ###")
+        logger.info("Total number of samples used for evaluation: {}".format(Num_extract_eval))
+        logger.info("### Feature Extraction Complete ###")
 
     if conf.set.train:
         if not os.path.isdir(conf.path.model):
@@ -78,16 +77,14 @@ def main(conf: DictConfig):
 
         model = Protonet()
         best_acc = train(model, train_loader, val_loader, num_batches_train, num_batches_val, conf)
-        print("Best accuracy of the model on training set is {:.4f}".format(best_acc))
-        print("Training Complete")
+        logger.info("Best accuracy of the model on training set is {:.4f}".format(best_acc))
+        logger.info("Training Complete")
 
     if conf.set.eval:
         pass
 
 if __name__ == '__main__':
-    # if torch.cuda.is_available():
-    #     device = "cuda:0"
-    #     torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    # else:
-    #     device = "cpu"
+    log_fmt = '%(asctime)s - %(modules)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=log_fmt)
+    logger = logging.getLogger(__name__)
     main()

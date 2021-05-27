@@ -1,7 +1,12 @@
 import torch
+import logging
 import numpy as np
 from tqdm import tqdm
 from .loss_functions import prototypical_loss_fn as loss_fn
+
+log_fmt = '%(asctime)s - %(module)s - %(levelname)s - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_fmt)
+logger = logging.getLogger(__name__)
 
 def train(model, train_loader, val_loader, num_batches_train, num_batches_val, conf):
     if conf.train.device == 'cuda':
@@ -29,7 +34,7 @@ def train(model, train_loader, val_loader, num_batches_train, num_batches_val, c
     
     model.to(device)
 
-    for epoch in range(epochs + 1):
+    for epoch in range(epochs):
         train_iterator = iter(train_loader)
         train_batches = tqdm(train_iterator, desc='Epoch: {}'.format(epoch + 1))
         for batch in train_batches:
@@ -52,7 +57,7 @@ def train(model, train_loader, val_loader, num_batches_train, num_batches_val, c
 
         avg_loss = np.mean(train_loss_list[-num_batches_train:])
         avg_acc = np.mean(train_acc_list[-num_batches_train:])
-        print('Average train loss: {:.4f}  Average training accuracy: {:.4f}'.format(avg_loss, avg_acc))
+        logger.info('Epoch: {}  Average train loss: {:.4f}  Average training accuracy: {:.4f}'.format(epoch + 1, avg_loss, avg_acc))
 
         lr_scheduler.step()
         model.eval()
@@ -68,10 +73,10 @@ def train(model, train_loader, val_loader, num_batches_train, num_batches_val, c
 
         avg_loss = np.mean(val_loss_list[-num_batches_val:])
         avg_acc = np.mean(val_acc_list[-num_batches_val:])
-        print('Average validation loss: {:.4f}  Average validation accuracy: {:.4f}'.format(avg_loss, avg_acc))
+        logger.info('Epoch: {}  Average validation loss: {:.4f}  Average validation accuracy: {:.4f}'.format(epoch + 1, avg_loss, avg_acc))
 
         if avg_acc > best_val_acc:
-            print("Saving the best model with valdation accuracy {:.4f}".format(avg_acc))
+            logger.info("Saving the best model with valdation accuracy {:.4f}".format(avg_acc))
             best_val_acc = avg_acc
             best_state = model.state_dict()
             torch.save(model.state_dict(),best_model_path)

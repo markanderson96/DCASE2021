@@ -5,9 +5,14 @@ import numpy as np
 import pandas as pd
 import h5py
 import os
+import logging
 
 from glob import glob
 from itertools import chain
+
+log_fmt = '%(asctime)s - %(module)s - %(levelname)s - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_fmt)
+logger = logging.getLogger(__name__)
 
 def create_labels(df_pos, feature, glob_cls_name, train_file, seg_len, hop_seg, fps):
 
@@ -81,8 +86,7 @@ def create_labels(df_pos, feature, glob_cls_name, train_file, seg_len, hop_seg, 
 
             feature_patch = feature[str_ind:end_ind]
             if feature_patch.shape[0] == 0:
-                print(feature_patch.shape[0])
-                print("The patch is of 0 length")
+                logger.warning("The patch is of 0 length")
                 continue
 
             repeat_num = int(seg_len / (feature_patch.shape[0])) + 1
@@ -93,7 +97,7 @@ def create_labels(df_pos, feature, glob_cls_name, train_file, seg_len, hop_seg, 
             label_list.append(label)
             file_index += 1
     
-    print("Total files created : {}".format(file_index))
+    logger.info("Total files created : {}".format(file_index))
     return label_list
 
 def time2frame(df, fps):
@@ -138,7 +142,7 @@ def featureExtract(conf=None,mode=None):
     hop_seg = int(round(conf.features.hop_seg * fps))
     
     if mode == 'train':
-        print("=== Processing training set ===")
+        logger.info("=== Processing training set ===")
         csv_files = [file for path, _, _ in os.walk(conf.path.train_dir) 
                      for file in glob(os.path.join(path, '*.csv')) ]
         train_file_dir = os.path.join(conf.path.train_feat,'train.h5')
@@ -156,7 +160,7 @@ def featureExtract(conf=None,mode=None):
             
             audio_path = file.replace('csv', 'wav')
             
-            print("Processing file name {}".format(audio_path))
+            logger.info("Processing file name {}".format(audio_path))
 
             data, sr = torchaudio.load(audio_path)
             resample = T.Resample(sr, conf.features.sample_rate)
@@ -179,7 +183,7 @@ def featureExtract(conf=None,mode=None):
             )
             label_tr.append(label_list)
         
-        print("Feature extraction for training set complete")
+        logger.info("Feature extraction for training set complete")
         
         num_extract = len(train_file['features'])
         flat_list = [item for sublist in label_tr for item in sublist]
@@ -191,7 +195,7 @@ def featureExtract(conf=None,mode=None):
         return num_extract, data_shape
     
     else:
-        print("=== Processing validation set ===")
+        logger.info("=== Processing validation set ===")
         csv_files = [file for path, _, _ in os.walk(conf.path.val_dir) 
                     for file in glob(os.path.join(path, '*.csv')) ]
         num_extract = 0
@@ -252,8 +256,8 @@ def featureExtract(conf=None,mode=None):
             negative_idx_end = feature.shape[0] - 1
             val_file['query_index_start'][:] = end_time[index_sup[-1]]
 
-            print('=== Processing Evaluation File: {} ==='.format(filename))
-            print('=== Creating negative dataset ===')
+            logger.info('=== Processing Evaluation File: {} ==='.format(filename))
+            logger.info('=== Creating negative dataset ===')
             while negative_idx_end - (start_index + negative_hop) > seg_len:
                 negative_patch = feature[int(start_index + negative_hop):
                                          int(start_index + negative_hop + seg_len)]
@@ -273,7 +277,7 @@ def featureExtract(conf=None,mode=None):
                                               negative_patch.shape[1]))
             val_file['feat_negative'][negative_idx] = negative_patch
 
-            print('=== Creating positive dataset ===')
+            logger.info('=== Creating positive dataset ===')
             for index in index_sup:
                 start_index = int(start_time[index])
                 end_index = int(end_time[index])
@@ -302,8 +306,7 @@ def featureExtract(conf=None,mode=None):
                     positive_patch = feature[start_index:end_index]
 
                     if positive_patch.shape[0] == 0:
-                        print(positive_patch.shape[0])
-                        print("The patch is of 0 length")
+                        logger.warning("The patch is of 0 length")
                         continue
                     
                     repeat_num = int(seg_len / (positive_patch.shape[0])) + 1
@@ -314,7 +317,7 @@ def featureExtract(conf=None,mode=None):
                     val_file['feat_positive'][positive_idx] = patch_new
                     positive_idx += 1
 
-            print('=== Creating query dataset ===')
+            logger.info('=== Creating query dataset ===')
             while negative_idx_end - (query_idx_start + query_hop) > seg_len:
                 query_patch = feature[int(query_idx_start + query_hop):
                                       int(query_idx_start + query_hop + seg_len)]
@@ -334,4 +337,4 @@ def featureExtract(conf=None,mode=None):
             num_extract += len(val_file['feat_query'])
             val_file.close()
 
-        return num_extract, 
+        return num_extract
