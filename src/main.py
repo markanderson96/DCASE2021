@@ -15,8 +15,9 @@ from omegaconf import DictConfig
 
 from data.datagenerator import *
 from data.features import *
-from training import train
+from training.train import *
 from models.protonet import Protonet
+from utils import EpisodicBatchSampler
 
 
 @hydra.main(config_path='../config', config_name='config')
@@ -44,8 +45,8 @@ def main(conf: DictConfig):
         if not os.path.isdir(conf.path.model):
             os.makedirs(conf.path.model)
         
-        train_gen = TrainGenerator(conf)
-        X_train, Y_train, X_val, Y_val = train_gen.generate_train_data()
+        train_gen = Datagen(conf)
+        X_train, Y_train, X_val, Y_val = train_gen.generate_train()
         X_train = torch.tensor(X_train)
         Y_train = torch.LongTensor(Y_train)
         X_val = torch.tensor(X_val)
@@ -57,18 +58,27 @@ def main(conf: DictConfig):
         num_batches_train = len(Y_train) // batch_size
         num_batches_val = len(Y_val) // batch_size
 
+        #breakpoint()
+        train_sampler = EpisodicBatchSampler(Y_train, num_batches_train, conf.train.k_way, samples_per_class)
+        val_sampler = EpisodicBatchSampler(Y_val, num_batches_val, conf.train.k_way, samples_per_class)
+
         train_dataset = torch.utils.data.TensorDataset(X_train, Y_train)
         val_dataset = torch.utils.data.TensorDataset(X_val, Y_val)
 
         train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                                   batch_sampler=train_sampler,
+                                                   num_workers=0,
                                                    pin_memory=True,
-                                                   shuffle=True)
+                                                   shuffle=False)
         val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
+                                                 batch_sampler=val_sampler,
+                                                 num_workers=0,
                                                  pin_memory=True,
-                                                 shuffle=True)
+                                                 shuffle=False)
 
         model = Protonet()
-        best_acc, best_state = train(model, train_loader, val_loader, num_batches_train, num_batches_val, conf)
+        best_acc = train(model, train_loader, val_loader, num_batches_train, num_batches_val, conf)
+        print("Best accuracy of the model on training set is {:.4f}".format(best_acc))
         print("Training Complete")
 
     if conf.set.eval:
