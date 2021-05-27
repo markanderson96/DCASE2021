@@ -1,4 +1,4 @@
-.PHONY: clean data lint requirements features train test_environment create_environment
+.PHONY: clean lint requirements features train test_environment create_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -6,7 +6,7 @@
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROFILE = default
-PROJECT_NAME = DCASE2021FewShot
+PROJECT_NAME = DCASE2021FewShot_Sigmedia
 PYTHON_INTERPRETER = python
 
 ifeq (,$(shell which conda))
@@ -24,21 +24,22 @@ requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
+all:
+	$(PYTHON_INTERPRETER) src/main.py set.features=true
+	$(PYTHON_INTERPRETER) src/main.py set.train=true
+	$(PYTHON_INTERPRETER) src/main.py set.eval=true
+
 ## Make Dataset
 data: 
-	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/interim data/processed
-
-## Make features
-features: 
-	$(PYTHON_INTERPRETER) src/features/build_features.py
+	$(PYTHON_INTERPRETER) src/main.py set.features=true
 
 ## Train Model
 train: 
-	$(PYTHON_INTERPRETER) src/models/train_model.py
+	$(PYTHON_INTERPRETER) src/main.py set.train=true
 
 ### Create visuals
 visuals:
-	$(PYTHON_INTERPRETER) src/visualization/visualize.py
+	@echo "does not exist yet"
 
 ## Delete all compiled Python files
 clean:
