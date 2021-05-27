@@ -2,7 +2,7 @@ import torch.nn as nn
 
 def conv_block(in_channels, out_channels):
     return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, 3, padding_mode='zeros'),
+        nn.Conv2d(in_channels, out_channels, 2, padding_mode='zeros'),
         nn.BatchNorm2d(out_channels),
         nn.ReLU(),
         nn.MaxPool2d(2)
@@ -14,6 +14,7 @@ class Protonet(nn.Module):
         self.encoder = nn.Sequential(
             conv_block(1, 128),
             conv_block(128, 128),
+            conv_block(128,128),
             conv_block(128, 128)
         )
     
