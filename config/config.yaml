@@ -11,8 +11,8 @@ path:
   train_feat: ${path.feat_path}/feat_train
   eval_feat:  ${path.feat_path}/feat_eval
   model: ${path.root_dir}/models
-  best_model: ${path.Model}/best_model.pth
-  last_model: ${path.Model}/last_model.pth
+  best_model: ${path.model}/best_model.pth
+  last_model: ${path.model}/last_model.pth
 
 features:
   seg_len: 0.200
@@ -24,7 +24,9 @@ features:
 train:
   device: cuda
   n_shot: 5
-  k_way: 5
-  epochs: 10
-  lr: 0.01
+  k_way: 10
+  epochs: 20
+  lr: 0.001
   momentum: 0.8
+  scheduler_gamma: 0.5
+  scheduler_step_size: 10
