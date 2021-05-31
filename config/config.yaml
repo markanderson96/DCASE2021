@@ -1,6 +1,6 @@
 set:
   features: false
-  train: false
+  train: true
   eval: false
 
 path:
@@ -15,6 +15,7 @@ path:
   last_model: ${path.model}/last_model.pth
 
 features:
+  time_stretch: 1.2
   seg_len: 0.200
   hop_seg: 0.050
   sample_rate: 22050
@@ -25,8 +26,8 @@ train:
   device: cuda
   n_shot: 5
   k_way: 10
-  epochs: 20
+  epochs: 50
   lr: 0.001
-  momentum: 0.8
-  scheduler_gamma: 0.5
-  scheduler_step_size: 10
+  momentum: 0.9
+  threshold: 0.001
+  patience: 5
