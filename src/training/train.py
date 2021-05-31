@@ -17,9 +17,9 @@ def train(model, train_loader, val_loader, num_batches_train, num_batches_val, c
     optimiser = torch.optim.SGD(model.parameters(), 
                                 lr=conf.train.lr, 
                                 momentum=conf.train.momentum)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimiser,
-                                                   gamma=conf.train.scheduler_gamma,
-                                                   step_size=conf.train.scheduler_step_size)
+    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimiser,
+                                                              patience=conf.train.patience,
+                                                              verbose=True)
     epochs = conf.train.epochs
 
     best_model_path = conf.path.best_model
@@ -58,7 +58,6 @@ def train(model, train_loader, val_loader, num_batches_train, num_batches_val, c
         avg_acc = np.mean(train_acc_list[-num_batches_train:])
         logger.info('Epoch: {}  Average train loss: {:.4f}  Average training accuracy: {:.4f}'.format(epoch + 1, avg_loss, avg_acc))
 
-        lr_scheduler.step()
         model.eval()
         val_iterator = iter(val_loader)
         for batch in val_iterator:
@@ -69,6 +68,8 @@ def train(model, train_loader, val_loader, num_batches_train, num_batches_val, c
             val_loss, val_acc = loss_fn(Y_out, Y, conf)
             val_loss_list.append(val_loss.item())
             val_acc_list.append(val_acc.item())
+
+        lr_scheduler.step(val_loss)
 
         avg_loss = np.mean(val_loss_list[-num_batches_val:])
         avg_acc = np.mean(val_acc_list[-num_batches_val:])
