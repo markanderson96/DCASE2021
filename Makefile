@@ -18,16 +18,18 @@ endif
 #################################################################################
 # COMMANDS                                                                      #
 #################################################################################
-
+# enter the environment
+enter_environment: create_environment
+	ifeq (True,$(HAS_CONDA))
+		conda activate $(PROJECT_NAME)
+	else
+		workon $(PROJECT_NAME)
+	endif
+	
 ## Install Python Dependencies
 requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
-
-all:
-	$(PYTHON_INTERPRETER) src/main.py set.features=true
-	$(PYTHON_INTERPRETER) src/main.py set.train=true
-	$(PYTHON_INTERPRETER) src/main.py set.eval=true
 
 ## Make Dataset
 data: 

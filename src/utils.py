@@ -2,15 +2,6 @@ import torch
 import numpy as np
 import torch.utils.data as data
 
-
-def euclidean_dist(a, b):
-    n = a.shape[0]
-    m = b.shape[0]
-    a = a.unsqueeze(1).expand(n, m, -1)
-    b = b.unsqueeze(0).expand(n, m, -1)
-    dist = torch.pow(a - b, 2).sum(dim=2)
-    return dist
-
 ''' Episodic batch sampler adoted from https://github.com/jakesnell/prototypical-networks/'''
 
 class EpisodicBatchSampler(data.Sampler):
