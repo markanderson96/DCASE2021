@@ -31,7 +31,7 @@ def main(conf: DictConfig):
         os.makedirs(conf.path.train_feat)
 
     if not os.path.isdir(conf.path.eval_feat):
-        os.makedirs(conf.path.feat_eval)
+        os.makedirs(conf.path.eval_feat)
 
     if conf.set.features:
         logger.info("### Feature Extraction ###")
