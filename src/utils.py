@@ -19,6 +19,7 @@ class EpisodicBatchSampler(data.Sampler):
         self.n_episodes = n_episodes
         self.k_way = k_way
         self.n_samples = n_samples
+        self.batch_size = n_episodes
 
         labels = np.array(labels)
         self.samples_indices = []
