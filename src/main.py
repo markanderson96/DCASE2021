@@ -81,7 +81,8 @@ def main(conf: DictConfig):
     protonet = Protonet(conf)
     tb_logger = TensorBoardLogger("logs", name="dcase_protonet")
     
-    trainer = pl.Trainer(gpus=1,
+    trainer = pl.Trainer(gpus=conf.train.gpus,
+                         accelerator=conf.train.accelerator,
                          max_epochs=conf.train.epochs,
                          logger=tb_logger,
                          fast_dev_run=False)
