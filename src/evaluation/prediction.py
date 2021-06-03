@@ -42,7 +42,8 @@ def eval_prototypes(conf=None,hdf_eval=None,strt_index_query=None):
 
     query_dataset = torch.utils.data.TensorDataset(X_query, Y_query)
     q_loader = torch.utils.data.DataLoader(dataset=query_dataset, batch_sampler=None,batch_size=conf.eval.query_batch_size,shuffle=False)
-    query_set_feat = torch.zeros(0,896).cpu()
+    q_set_size = X_query.shape[0] * X_query.shape[2]
+    query_set_feat = torch.zeros(0, q_set_size).cpu()
 
 
     Model = Protonet(conf)
