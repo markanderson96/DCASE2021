@@ -26,7 +26,7 @@ class Protonet(pl.LightningModule):
         self.conf = conf
         self.encoder = nn.Sequential(
             conv_block(1, 128),
-            conv_block(128, 128),
+            #conv_block(128, 128),
             conv_block(128, 128),
             conv_block(128, 128)
         )
