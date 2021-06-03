@@ -1,4 +1,4 @@
-.PHONY: clean lint requirements features train test_environment create_environment
+.PHONY: clean lint requirements data train evaluate test_environment create_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -6,8 +6,8 @@
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROFILE = default
-PROJECT_NAME = DCASE2021FewShot_Sigmedia
-PYTHON_INTERPRETER = python
+PROJECT_NAME = DCASE2021FewShot
+PYTHON_INTERPRETER = python3
 
 ifeq (,$(shell which conda))
 HAS_CONDA=False
@@ -18,16 +18,18 @@ endif
 #################################################################################
 # COMMANDS                                                                      #
 #################################################################################
-
+# enter the environment
+enter_environment: create_environment
+	ifeq (True,$(HAS_CONDA))
+		conda activate $(PROJECT_NAME)
+	else
+		workon $(PROJECT_NAME)
+	endif
+	
 ## Install Python Dependencies
 requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
-
-all:
-	$(PYTHON_INTERPRETER) src/main.py set.features=true
-	$(PYTHON_INTERPRETER) src/main.py set.train=true
-	$(PYTHON_INTERPRETER) src/main.py set.eval=true
 
 ## Make Dataset
 data: 
@@ -36,6 +38,12 @@ data:
 ## Train Model
 train: 
 	$(PYTHON_INTERPRETER) src/main.py set.train=true
+
+evaluate:
+### Evaluate mode
+	$(PYTHON_INTERPRETER) src/main.py set.eval=true
+	$(PYTHON_INTERPRETER) src/post_proc.py -val_path=./data/Development_Set/Validation_Set/ -evaluation_file=eval_out.csv -new_evaluation_file=eval_out_clean.csv  
+	$(PYTHON_INTERPRETER) src/evaluation/evaluation.py -pred_file=eval_out_clean.csv -ref_files_path=./data/Development_Set/Validation_Set/ -team_name=sigmedia -dataset=VAL -savepath=./
 
 ### Create visuals
 visuals:
@@ -55,7 +63,7 @@ create_environment:
 ifeq (True,$(HAS_CONDA))
 		@echo ">>> Detected conda, creating conda environment."
 ifeq (3,$(findstring 3,$(PYTHON_INTERPRETER)))
-	conda create --name $(PROJECT_NAME) python=3.9
+	conda create --name $(PROJECT_NAME) python=3.8
 else
 	conda create --name $(PROJECT_NAME) python=2.7
 endif

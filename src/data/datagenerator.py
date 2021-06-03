@@ -60,7 +60,6 @@ def norm_params(X):
         - std: Standard deviation of the feature set
         '''
     mean = np.mean(X)
-
     std = np.std(X)
     return mean, std
 
@@ -109,13 +108,13 @@ class Datagen(object):
 
 class Datagen_test(Datagen):
     def __init__(self,hf,conf):
-        super(Datagen_test, self).__init__(conf= conf)
-        self.x_pos = hf['feat_pos'][:]
-        self.x_neg = hf['feat_neg'][:]
+        super(Datagen_test, self).__init__(conf=conf)
+        self.x_pos = hf['feat_positive'][:]
+        self.x_neg = hf['feat_negative'][:]
         self.x_query = hf['feat_query'][:]
 
     def generate_eval(self):
-        '''Returns normalizedtest features
+        '''Returns normalized test features
         Output:
         - X_pos: Positive set features. Positive class prototypes will be calculated from this
         - X_query: Query set. Onset-offset prediction will be made on this set.
