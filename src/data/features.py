@@ -165,13 +165,17 @@ def featureExtract(conf=None,mode=None):
             data, sr = torchaudio.load(audio_path)
             resample = T.Resample(sr, conf.features.sample_rate)
             data = resample(data)
-            spectrogram = T.MelSpectrogram(
+            data = (data - torch.mean(data)) / torch.std(data)
+            spectrogram = T.Spectrogram(
                 n_fft=conf.features.n_fft,
                 hop_length=conf.features.hop,
                 window_fn=(torch.hamming_window),
-                power=1.0
+                power=2.0
             )
-            feature = (torch.squeeze(spectrogram(data))).T  
+            feature = torch.squeeze(spectrogram(data))
+            scale = T.AmplitudeToDB(stype='power')
+            feature = scale(feature)
+            feature = torch.transpose(feature, 0, 1)  
 
             df_pos = df[(df == 'POS').any(axis=1)]
             
@@ -243,13 +247,16 @@ def featureExtract(conf=None,mode=None):
             data, sr = torchaudio.load(audio_path)
             resample = T.Resample(sr, conf.features.sample_rate)
             data = resample(data)
-            spectrogram = T.MelSpectrogram(
+            data = (data - torch.mean(data)) / torch.std(data)
+            spectrogram = T.Spectrogram(
                 n_fft=conf.features.n_fft,
                 hop_length=conf.features.hop,
                 window_fn=(torch.hamming_window),
-                power=1.0
+                power=2.0
             )
-            feature = torch.squeeze(spectrogram(data)) 
+            feature = torch.squeeze(spectrogram(data))
+            scale = T.AmplitudeToDB(stype='power')
+            feature = scale(feature)
             feature = torch.transpose(feature, 0, 1) 
 
             query_idx_start = end_time[index_sup[-1]]
