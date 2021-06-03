@@ -2,6 +2,18 @@ import torch
 import numpy as np
 import torch.utils.data as data
 
+def euclidean_dist(a, b):
+    assert a.shape[1] == b.shape[1]
+
+    n = a.shape[0]
+    m = b.shape[0]
+    d = a.shape[1]
+
+    a = a.unsqueeze(1).expand(n, m, d)
+    b = b.unsqueeze(0).expand(n, m, d)
+    dist = torch.pow(a - b, 2).sum(2)
+    return dist
+
 ''' Episodic batch sampler adoted from https://github.com/jakesnell/prototypical-networks/'''
 
 class EpisodicBatchSampler(data.Sampler):
@@ -19,18 +31,17 @@ class EpisodicBatchSampler(data.Sampler):
         self.n_episodes = n_episodes
         self.k_way = k_way
         self.n_samples = n_samples
-        self.batch_size = n_episodes
 
         labels = np.array(labels)
-        self.samples_indices = []
+        self.sample_indices = []
         #breakpoint()
         for i in range(max(labels) + 1):
             ind = np.argwhere(labels == i).reshape(-1)
             ind = torch.from_numpy(ind)
-            self.samples_indices.append(ind)
+            self.sample_indices.append(ind)
 
         #breakpoint()
-        if self.k_way > len(self.samples_indices):
+        if self.k_way > len(self.sample_indices):
             raise ValueError('Error: "n_way" parameter is higher than the unique number of classes')
 
     def __len__(self):
@@ -39,9 +50,9 @@ class EpisodicBatchSampler(data.Sampler):
     def __iter__(self):
         for batch in range(self.n_episodes):
             batch = []
-            classes = torch.randperm(len(self.samples_indices))[:self.k_way]
+            classes = torch.randperm(len(self.sample_indices))[:self.k_way]
             for c in classes:
-                l = self.samples_indices[c]
+                l = self.sample_indices[c]
                 pos = torch.randperm(len(l))[:self.n_samples]
                 batch.append(l[pos])
             batch = torch.stack(batch).t().reshape(-1)
