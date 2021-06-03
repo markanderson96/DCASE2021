@@ -1,4 +1,4 @@
-.PHONY: clean lint requirements data train evaluate test_environment create_environment
+.PHONY: clean lint requirements data train evaluate all test_environment create_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -31,12 +31,18 @@ requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
+### All if doing full pass
+all: 
+	data 
+	train 
+	evaluate
+
 ## Make Dataset
 data: 
 	$(PYTHON_INTERPRETER) src/main.py set.features=true
 
 ## Train Model
-train: 
+train:
 	$(PYTHON_INTERPRETER) src/main.py set.train=true
 
 evaluate:
