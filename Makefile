@@ -1,4 +1,4 @@
-.PHONY: clean lint requirements features train test_environment create_environment
+.PHONY: clean lint requirements data train evaluate test_environment create_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -38,6 +38,12 @@ data:
 ## Train Model
 train: 
 	$(PYTHON_INTERPRETER) src/main.py set.train=true
+
+evaluate:
+### Evaluate mode
+	$(PYTHON_INTERPRETER) src/main.py set.eval=true
+	$(PYTHON_INTERPRETER) src/post_proc.py -val_path=./data/Development_Set/Validation_Set/ -evaluation_file=eval_out.csv -new_evaluation_file=eval_out_clean.csv  
+	$(PYTHON_INTERPRETER) src/evaluation/evaluation.py -pred_file=eval_out_clean.csv -ref_files_path=./data/Development_Set/Validation_Set/ -team_name=sigmedia -dataset=VAL -savepath=./
 
 ### Create visuals
 visuals:
