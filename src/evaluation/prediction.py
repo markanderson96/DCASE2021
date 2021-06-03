@@ -42,8 +42,9 @@ def eval_prototypes(conf=None,hdf_eval=None,strt_index_query=None):
 
     query_dataset = torch.utils.data.TensorDataset(X_query, Y_query)
     q_loader = torch.utils.data.DataLoader(dataset=query_dataset, batch_sampler=None,batch_size=conf.eval.query_batch_size,shuffle=False)
-    q_set_size = X_query.shape[0] * X_query.shape[2]
-    query_set_feat = torch.zeros(0, q_set_size).cpu()
+    q_set_size = X_query.shape[1] * X_query.shape[2]
+    #breakpoint()
+    query_set_feat = torch.zeros(0, 3968).cpu()
 
 
     Model = Protonet(conf)
@@ -143,5 +144,5 @@ def get_probability(x_pos,neg_proto,query_set_out):
     prob = torch.softmax(inverse_dist,dim=1)
     '''  Probability array for positive class'''
     prob_pos = prob[:,0]
-    breakpoint()
+    
     return prob_pos.detach().cpu().tolist()
