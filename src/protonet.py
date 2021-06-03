@@ -11,46 +11,37 @@ from omegaconf import DictConfig
 
 from data.datagenerator import *
 from data.features import *
-from utils import EpisodicBatchSampler
+from utils import euclidean_dist
 
 class Protonet(pl.LightningModule):
     def __init__(self, conf):
         super().__init__()
+        def conv_block(in_channels, out_channels):
+            return nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 2, padding_mode='zeros'),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(),
+                nn.MaxPool2d(2)
+        )
         self.conf = conf
         self.encoder = nn.Sequential(
-            self.conv_block(1, 128),
-            self.conv_block(128, 128),
-            self.conv_block(128,128),
-            self.conv_block(128, 128)
+            conv_block(1, 128),
+            conv_block(128, 128),
+            conv_block(128, 128),
+            conv_block(128, 128)
         )
-    
-    def conv_block(self, in_channels, out_channels):
-        return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 2, padding_mode='zeros'),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
+
     
     def forward(self, x):
         (num_samples, seq_len, fft_bins) = x.shape
         x = x.view(-1, 1, seq_len, fft_bins)
         x = self.encoder(x)
-        
         return x.view(x.size(0), -1)
 
     def loss_function(self, Y_in, Y_target):
         def support_idxs(c):
             return Y_target.eq(c).nonzero()[:n_support].squeeze(1)
-
-        def euclidean_dist(a, b):
-            n = a.shape[0]
-            m = b.shape[0]
-            a = a.unsqueeze(1).expand(n, m, -1)
-            b = b.unsqueeze(0).expand(n, m, -1)
-            dist = torch.pow(a - b, 2).sum(dim=2)
-            return dist
-
+        
         n_support = self.conf.train.n_shot
 
         Y_target = Y_target.to('cpu')
@@ -133,4 +124,9 @@ class Protonet(pl.LightningModule):
         items = super().get_progress_bar_dict()
         items.pop("v_num", None)
         return items
+
+    def predict_step(self, batch, batch_idx, dataloader_idx):
+        X, Y = batch         
+        Y_out = self(X)
+        return super().predict_step(batch, batch_idx, dataloader_idx=dataloader_idx)
         
