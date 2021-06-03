@@ -1,34 +1,39 @@
 set:
   features: false
-  train: true
-  eval: false
+  train: false
+  eval: true
+  gpus: 1 # 0 to use CPU
 
 path:
-  root_dir: $(HOME)/DCASE2021
+  root_dir: /home/mark/projects/phd/DCASE2021
   train_dir: ${path.root_dir}/data/Development_Set/Training_Set
   val_dir:  ${path.root_dir}/data/Development_Set/Validation_Set
   feat_path: ${path.root_dir}/features
   train_feat: ${path.feat_path}/feat_train
   eval_feat:  ${path.feat_path}/feat_eval
   model: ${path.root_dir}/models
-  best_model: ${path.model}/best_model.pth
-  last_model: ${path.model}/last_model.pth
+  best_model: ${path.model}/best_model.ckpt
+  last_model: ${path.model}/last_model.ckpt
 
 features:
   time_stretch: 1.2
   seg_len: 0.200
   hop_seg: 0.050
   sample_rate: 22050
-  n_fft: 256
-  hop: 128
+  n_fft: 512
+  hop: 256
 
 train:
-  gpus: 2 # 0 to use CPU
-  accelerator: ddp
   n_shot: 5
   k_way: 10
   epochs: 100
-  lr: 0.001
-  momentum: 0.9
-  threshold: 0.001
+  lr: 0.0001
+  momentum: 0.7
+  threshold: 0.01
   patience: 5
+
+eval:
+  samples_neg: 650
+  iterations: 3
+  query_batch_size: 8
+  negative_set_batch_size : 16
