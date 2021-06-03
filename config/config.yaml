@@ -1,7 +1,7 @@
 set:
   features: false
   train: false
-  eval: true
+  eval: false
   gpus: 1 # 0 to use CPU
 
 path:
@@ -37,3 +37,4 @@ eval:
   iterations: 3
   query_batch_size: 8
   negative_set_batch_size : 16
+  threshold: 0.5

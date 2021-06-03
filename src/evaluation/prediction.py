@@ -103,7 +103,7 @@ def eval_prototypes(conf=None,hdf_eval=None,strt_index_query=None):
     #breakpoint()
 
     krn = np.array([1, -1])
-    prob_thresh = np.where(prob_final > 0.5, 1, 0)
+    prob_thresh = np.where(prob_final > conf.eval.threshold, 1, 0)
 
     prob_pos_final = prob_final * prob_thresh
     changes = np.convolve(krn, prob_thresh)
