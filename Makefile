@@ -47,7 +47,10 @@ train:
 
 evaluate:
 ### Evaluate mode
-	$(PYTHON_INTERPRETER) src/main.py set.eval=true
+	$(PYTHON_INTERPRETER) src/main.py set.eval=true 
+	results
+
+results:
 	$(PYTHON_INTERPRETER) src/post_proc.py -val_path=./data/Development_Set/Validation_Set/ -evaluation_file=eval_out.csv -new_evaluation_file=eval_out_clean.csv  
 	$(PYTHON_INTERPRETER) src/evaluation/evaluation.py -pred_file=eval_out_clean.csv -ref_files_path=./data/Development_Set/Validation_Set/ -team_name=sigmedia -dataset=VAL -savepath=./
 
