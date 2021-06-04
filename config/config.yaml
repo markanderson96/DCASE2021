@@ -5,7 +5,7 @@ set:
   gpus: 1 # 0 to use CPU
 
 path:
-  root_dir: /home/mark/projects/phd/DCASE2021
+  root_dir: /home/manderson/DCASE2021
   train_dir: ${path.root_dir}/data/Development_Set/Training_Set
   val_dir:  ${path.root_dir}/data/Development_Set/Validation_Set
   feat_path: ${path.root_dir}/features
@@ -37,4 +37,4 @@ eval:
   iterations: 3
   query_batch_size: 8
   negative_set_batch_size : 16
-  threshold: 0.5
+  threshold: 0.55
