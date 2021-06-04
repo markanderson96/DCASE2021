@@ -14,8 +14,8 @@ from tqdm import tqdm
 from glob import glob
 from omegaconf import DictConfig
 
-from data.datagenerator import *
-from data.features import *
+from datagenerator import *
+from features import *
 from utils import EpisodicBatchSampler, euclidean_dist
 from protonet import Protonet
 from evaluation.prediction import *
