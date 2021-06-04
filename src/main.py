@@ -18,7 +18,7 @@ from datagenerator import *
 from features import *
 from utils import EpisodicBatchSampler, euclidean_dist
 from protonet import Protonet
-from evaluation.prediction import *
+from prediction import *
 
 
 @hydra.main(config_path='../config', config_name='config')
