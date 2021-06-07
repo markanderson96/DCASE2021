@@ -1,4 +1,5 @@
 import os
+import shutil
 import logging
 import hydra
 import h5py
@@ -14,6 +15,7 @@ from tqdm import tqdm
 from glob import glob
 from omegaconf import DictConfig
 
+from augmentation import Augementation
 from datagenerator import *
 from features import *
 from utils import EpisodicBatchSampler, euclidean_dist
@@ -33,12 +35,31 @@ def main(conf: DictConfig):
         os.makedirs(conf.path.eval_feat)
 
     if conf.set.features:
+        if conf.set.augment:
+            
+            if not os.path.isdir(conf.path.data_dir + '/augmented'):
+                os.makedirs(conf.path.data_dir + '/augmented')
+            
+            save_path = conf.path.data_dir + '/augmented/'
+            
+            logger.info("### Data Augementation ###")
+            aug = Augementation(conf=conf)
+            csv_files = [file for path, _, _ in os.walk(conf.path.train_dir) 
+                         for file in glob(os.path.join(path, '*.csv')) ]
+            for file in csv_files:
+                audio_path = file.replace('csv', 'wav')
+                logger.info('=== Augmenting {} ==='.format(audio_path))
+                #aug.timeStretch(audio_path, save_path)
+                aug.labelAugment(file, save_path)
+            
+            shutil.move(save_path, conf.path.train_dir)
+
         logger.info("### Feature Extraction ###")
-        Num_extract_train, data_shape = featureExtract(conf=conf,mode="train")
+        Num_extract_train, data_shape = featureExtract(conf=conf, mode="train")
         logger.info("Shape of dataset is {}".format(data_shape))
         logger.info("Total training samples is {}".format(Num_extract_train))
 
-        Num_extract_eval = featureExtract(conf=conf,mode='eval')
+        Num_extract_eval = featureExtract(conf=conf, mode='eval')
         logger.info("Total number of samples used for evaluation: {}".format(Num_extract_eval))
         logger.info("### Feature Extraction Complete ###")
 

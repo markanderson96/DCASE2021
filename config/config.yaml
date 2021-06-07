@@ -1,13 +1,15 @@
 set:
+  augment: false
   features: false
   train: false
   eval: false
   gpus: 1 # 0 to use CPU
 
 path:
-  root_dir: /home/manderson/DCASE2021
-  train_dir: ${path.root_dir}/data/Development_Set/Training_Set
-  val_dir:  ${path.root_dir}/data/Development_Set/Validation_Set
+  root_dir: /home/mark/projects/phd/DCASE2021
+  data_dir: ${path.root_dir}/data
+  train_dir: ${path.data_dir}/Development_Set/Training_Set
+  val_dir:  ${path.data_dir}/Development_Set/Validation_Set
   feat_path: ${path.root_dir}/features
   train_feat: ${path.feat_path}/feat_train
   eval_feat:  ${path.feat_path}/feat_eval
@@ -16,7 +18,9 @@ path:
   last_model: ${path.model}/last_model.ckpt
 
 features:
-  time_stretch: 1.2
+
+  time_stretch: 0.2
+  direction: bidirectional
   seg_len: 0.200
   hop_seg: 0.050
   sample_rate: 22050
