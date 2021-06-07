@@ -4,7 +4,7 @@ import numpy as np
 
 from tqdm import tqdm
 
-from data.datagenerator import Datagen_test
+from datagenerator import Datagen_test
 from utils import EpisodicBatchSampler, euclidean_dist
 from protonet import Protonet
 

@@ -16,21 +16,20 @@ from utils import euclidean_dist
 class Protonet(pl.LightningModule):
     def __init__(self, conf):
         super().__init__()
-        def conv_block(in_channels, out_channels):
+        def conv_block(in_channels, out_channels, kernel_size=2):
             return nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, 3, padding_mode='zeros'),
+                nn.Conv2d(in_channels, out_channels, kernel_size, stride=1, padding_mode='zeros'),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
                 nn.MaxPool2d(2)
         )
         self.conf = conf
         self.encoder = nn.Sequential(
-            conv_block(1, 64),
-            conv_block(64, 128),
-            #conv_block(128, 128),
-            conv_block(128, 128)
+            conv_block(1, 128),
+            conv_block(128, 128),
+            conv_block(128, 128),
+            #conv_block(128, 128)
         )
-
     
     def forward(self, x):
         (num_samples, seq_len, fft_bins) = x.shape
