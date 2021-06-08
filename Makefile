@@ -1,4 +1,4 @@
-.PHONY: clean lint requirements data train evaluate all test_environment create_environment
+.PHONY: clean lint requirements features train evaluate all test_environment create_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -31,8 +31,12 @@ requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
+# augment data
+augment:
+	$(PYTHON_INTERPRETER) src/main.py set.augment=true
+
 ## Make Dataset
-data: 
+features: 
 	$(PYTHON_INTERPRETER) src/main.py set.features=true
 
 ## Train Model
