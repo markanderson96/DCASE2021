@@ -15,7 +15,6 @@ from tqdm import tqdm
 from glob import glob
 from omegaconf import DictConfig
 
-from augmentation import Augementation
 from datagenerator import Datagen
 from features import featureExtract
 from utils import EpisodicBatchSampler, euclidean_dist
@@ -34,32 +33,7 @@ def main(conf: DictConfig):
     if not os.path.isdir(conf.path.eval_feat):
         os.makedirs(conf.path.eval_feat)
 
-    
-    if conf.set.augment:
-        
-        if not os.path.isdir(conf.path.data_dir + '/augmented'):
-            os.makedirs(conf.path.data_dir + '/augmented')
-        if not os.path.isdir(conf.path.train_dir + '/augmented'):
-            os.makedirs(conf.path.train_dir + '/augmented')
-        
-        save_path = conf.path.data_dir + '/augmented/'
-        
-        logger.info("### Data Augementation ###")
-        aug = Augementation(save_path=save_path, conf=conf)
-        csv_files = [file for path, _, _ in os.walk(conf.path.train_dir) 
-                        for file in glob(os.path.join(path, '*.csv')) ]
-        for file in csv_files:
-            audio_path = file.replace('csv', 'wav')
-            logger.info('=== Augmenting {} ==='.format(audio_path))
-            aug.timeStretch(audio_path, file)
-            aug.frequencyMask(audio_path)
-            aug.timeMask(audio_path)
-            
-        
-        shutil.copytree(save_path, conf.path.train_dir)
-
     if conf.set.features:
-
         logger.info("### Feature Extraction ###")
         Num_extract_train, data_shape = featureExtract(conf=conf, mode="train")
         logger.info("Shape of dataset is {}".format(data_shape))

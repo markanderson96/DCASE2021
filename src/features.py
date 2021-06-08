@@ -1,6 +1,7 @@
 import torch
 import torchaudio
 import torchaudio.transforms as T
+import torchaudio.functional as F
 import numpy as np
 import pandas as pd
 import h5py
@@ -9,6 +10,8 @@ import logging
 
 from glob import glob
 from itertools import chain
+
+from augmentation import Augementation
 
 log_fmt = '%(asctime)s - %(module)s - %(levelname)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_fmt)
@@ -140,6 +143,8 @@ def featureExtract(conf=None,mode=None):
     #Converting fixed segment legnth to frames
     seg_len = int(round(conf.features.seg_len * fps))
     hop_seg = int(round(conf.features.hop_seg * fps))
+
+    aug = Augementation(conf=conf)
     
     if mode == 'train':
         logger.info("=== Processing training set ===")
@@ -157,25 +162,52 @@ def featureExtract(conf=None,mode=None):
             file_name = split_list[split_list.index('Training_Set') + 2]
 
             df = pd.read_csv(file, header=0, index_col=False)
-            
             audio_path = file.replace('csv', 'wav')
-            
             logger.info("Processing file name {}".format(audio_path))
 
             data, sr = torchaudio.load(audio_path)
             resample = T.Resample(sr, conf.features.sample_rate)
             data = resample(data)
             data = (data - torch.mean(data)) / torch.std(data)
-            spectrogram = T.MelSpectrogram(
+
+            feature = T.MelSpectrogram(
                 n_fft=conf.features.n_fft,
                 hop_length=conf.features.hop,
                 window_fn=(torch.hamming_window),
                 power=2.0
-            )
-            feature = torch.squeeze(spectrogram(data))
+            )(data)
+
+            # augment features if set in config
+            if conf.set.augment:
+                logger.info('=== creating augmented features ===')
+                #time stretch direction affects amount of features/type
+                if conf.features.direction == 'up':
+                    tsu, df_tsu = aug.timeStretch(audio_path, 'up')
+                    feature = torch.cat((feature, tsu), 2)
+                    df.append(df_tsu)
+                elif conf.features.direction =='down':
+                    tsd, df_tsd = aug.timeStretch(audio_path, 'down')
+                    feature = torch.cat((feature, tsd), 2)
+                    df.append(df_tsd)
+                else:
+                    tsu, df_tsu = aug.timeStretch(audio_path, 'up')
+                    tsd, df_tsd = aug.timeStretch(audio_path, 'down')
+                    feature = torch.cat((feature, tsu, tsd), 2)
+                    df.append(df_tsu)
+                    df.append(df_tsd)
+
+                # get masking augs, add to feature
+                fm, df_fm = aug.frequencyMask(audio_path)
+                tm, df_tm = aug.timeMask(audio_path)
+                
+                feature = torch.cat((feature, fm, tm), 2)
+                df.append(df_fm)
+                df.append(df_tm)
+
+            feature = torch.squeeze(feature)
             scale = T.AmplitudeToDB(stype='power')
             feature = scale(feature)
-            feature = torch.transpose(feature, 0, 1)  
+            feature = torch.transpose(feature, 0, 1) 
 
             df_pos = df[(df == 'POS').any(axis=1)]
             
@@ -183,7 +215,7 @@ def featureExtract(conf=None,mode=None):
                 df_pos, feature, 
                 glob_cls_name,
                 train_file, seg_len,
-                hop_seg,fps
+                hop_seg, fps
             )
             label_tr.append(label_list)
         
@@ -248,13 +280,40 @@ def featureExtract(conf=None,mode=None):
             resample = T.Resample(sr, conf.features.sample_rate)
             data = resample(data)
             data = (data - torch.mean(data)) / torch.std(data)
-            spectrogram = T.MelSpectrogram(
+            feature = T.MelSpectrogram(
                 n_fft=conf.features.n_fft,
                 hop_length=conf.features.hop,
                 window_fn=(torch.hamming_window),
                 power=2.0
-            )
-            feature = torch.squeeze(spectrogram(data))
+            )(data)
+
+                        # augment features if set in config
+            if conf.set.augment:
+                logger.info('=== creating augmented features ===')
+                #time stretch direction affects amount of features/type
+                if conf.features.direction == 'up':
+                    tsu, df_tsu = aug.timeStretch(audio_path, 'up')
+                    feature = torch.cat((feature, tsu), 2)
+                    df_val.append(df_tsu)
+                elif conf.features.direction =='down':
+                    tsd, df_tsd = aug.timeStretch(audio_path, 'down')
+                    feature = torch.cat((feature, tsd), 2)
+                    df_val.append(df_tsd)
+                else:
+                    tsu, df_tsu = aug.timeStretch(audio_path, 'up')
+                    tsd, df_tsd = aug.timeStretch(audio_path, 'down')
+                    feature = torch.cat((feature, tsu, tsd), 2)
+                    df_val.append(df_tsu)
+                    df_val.append(df_tsd)
+
+                # get masking augs, add to feature
+                fm, df_fm = aug.frequencyMask(audio_path)
+                tm, df_tm = aug.timeMask(audio_path)
+                feature = torch.cat((feature, fm, tm), 2)
+                df_val.append(df_fm)
+                df_val.append(df_tm)
+
+            feature = torch.squeeze(feature)
             scale = T.AmplitudeToDB(stype='power')
             feature = scale(feature)
             feature = torch.transpose(feature, 0, 1) 
