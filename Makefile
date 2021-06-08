@@ -32,8 +32,8 @@ requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
 # augment data
-augment:
-	$(PYTHON_INTERPRETER) src/main.py set.augment=true
+augmented:
+	$(PYTHON_INTERPRETER) src/main.py set.augment=true set.features=true
 
 ## Make Dataset
 features: 
