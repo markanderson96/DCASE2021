@@ -31,7 +31,7 @@ class Augementation():
             power=None
         )
         data = spectrogram(data)
-        frequency_mask = T.FrequencyMasking(freq_mask_param=80)
+        frequency_mask = T.FrequencyMasking(freq_mask_param=self.conf.features.freq_mask)
         data = frequency_mask(data)
         
         data = F.magphase(data, power=2.0)[0]
@@ -63,7 +63,7 @@ class Augementation():
             power=None
         )
         data = spectrogram(data)
-        time_mask = T.TimeMasking(time_mask_param=80)
+        time_mask = T.TimeMasking(time_mask_param=self.conf.features.time_mask)
         data = time_mask(data)
         
         data = F.magphase(data, power=2.0)[0]

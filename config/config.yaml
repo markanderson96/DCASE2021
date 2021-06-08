@@ -18,7 +18,8 @@ path:
   last_model: ${path.model}/last_model.ckpt
 
 features:
-
+  freq_mask: 20
+  time_mask: 20
   time_stretch: 0.05
   direction: bidirectional
   seg_len: 0.200
