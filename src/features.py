@@ -166,7 +166,7 @@ def featureExtract(conf=None,mode=None):
             resample = T.Resample(sr, conf.features.sample_rate)
             data = resample(data)
             data = (data - torch.mean(data)) / torch.std(data)
-            spectrogram = T.Spectrogram(
+            spectrogram = T.MelSpectrogram(
                 n_fft=conf.features.n_fft,
                 hop_length=conf.features.hop,
                 window_fn=(torch.hamming_window),
@@ -248,7 +248,7 @@ def featureExtract(conf=None,mode=None):
             resample = T.Resample(sr, conf.features.sample_rate)
             data = resample(data)
             data = (data - torch.mean(data)) / torch.std(data)
-            spectrogram = T.Spectrogram(
+            spectrogram = T.MelSpectrogram(
                 n_fft=conf.features.n_fft,
                 hop_length=conf.features.hop,
                 window_fn=(torch.hamming_window),
