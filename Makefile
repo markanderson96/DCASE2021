@@ -20,11 +20,11 @@ endif
 #################################################################################
 # enter the environment
 enter_environment: create_environment
-	ifeq (True,$(HAS_CONDA))
-		conda activate $(PROJECT_NAME)
-	else
-		workon $(PROJECT_NAME)
-	endif
+ifeq (True,$(HAS_CONDA))
+	conda activate $(PROJECT_NAME)
+else
+	workon $(PROJECT_NAME)
+endif
 	
 ## Install Python Dependencies
 requirements: test_environment
@@ -32,12 +32,8 @@ requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
 # augment data
-augmented:
-	$(PYTHON_INTERPRETER) src/main.py set.augment=true set.features=true
-
-## Make Dataset
-features: 
-	$(PYTHON_INTERPRETER) src/main.py set.features=true
+features:
+	$(PYTHON_INTERPRETER) src/main.py set.features_train=true set.features_test=false
 
 ## Train Model
 train:
@@ -50,6 +46,9 @@ evaluate:
 results:
 	$(PYTHON_INTERPRETER) src/post_proc.py -val_path=./data/Development_Set/Validation_Set/ -evaluation_file=eval_out.csv -new_evaluation_file=eval_out_clean.csv  
 	$(PYTHON_INTERPRETER) src/evaluation/evaluation.py -pred_file=eval_out_clean.csv -ref_files_path=./data/Development_Set/Validation_Set/ -team_name=sigmedia -dataset=VAL -savepath=./
+
+predict:
+	@echo "does not exist yet"
 
 ### Create visuals
 visuals:
