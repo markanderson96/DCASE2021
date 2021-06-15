@@ -1,7 +1,6 @@
 import torch
 import torchaudio
 import torchaudio.transforms as T
-import torchaudio.functional as F
 import numpy as np
 import pandas as pd
 import h5py
@@ -12,6 +11,7 @@ from glob import glob
 from itertools import chain
 
 from augmentation import Augementation
+from pcen import PCENTransform
 
 log_fmt = '%(asctime)s - %(module)s - %(levelname)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_fmt)
@@ -114,6 +114,72 @@ def time2frame(df, fps):
 
     return start_time, end_time
 
+def melSpectFeature(conf, audio_path, df, aug):
+    """
+    Function to make Mel Spectrogram features with optional augmentation
+    """
+    data, sr = torchaudio.load(audio_path)
+    resample = T.Resample(sr, conf.features.sample_rate)
+    data = resample(data)
+    data = (data - torch.mean(data)) / torch.std(data)
+
+    feature = T.MelSpectrogram(
+        n_fft=conf.features.n_fft,
+        hop_length=conf.features.hop,
+        window_fn=(torch.hamming_window),
+        power=2.0
+    )(data)
+
+    feature = PCENTransform(conf=conf)(feature)
+
+    # augment features if set in config
+    if aug:
+        logger.info('=== creating augmented features ===')
+        #time stretch direction affects amount of features/type
+        if conf.features.direction == 'up':
+            tsu, df_tsu = aug.timeStretch(audio_path, 'up')
+            feature = torch.cat((feature, tsu), 2)
+            df.append(df_tsu)
+        elif conf.features.direction =='down':
+            tsd, df_tsd = aug.timeStretch(audio_path, 'down')
+            feature = torch.cat((feature, tsd), 2)
+            df.append(df_tsd)
+        else:
+            tsu, df_tsu = aug.timeStretch(audio_path, 'up')
+            tsd, df_tsd = aug.timeStretch(audio_path, 'down')
+            feature = torch.cat((feature, tsu, tsd), 2)
+            df.append(df_tsu)
+            df.append(df_tsd)
+
+        # get masking augs, add to feature
+        fm = torch.tensor([])
+        tm = torch.tensor([])
+        df_fm = pd.DataFrame()
+        df_tm = pd.DataFrame()
+        # get augmentation in chunks
+        for chunk in range(0, feature.shape[2], 2588):
+            fm_chunk, df_fm_chunk = aug.frequencyMask(feature[:,:,chunk:chunk + 2588],
+                                                      audio_path)
+            tm_chunk, df_tm_chunk = aug.timeMask(feature[:,:,chunk:chunk + 2588],
+                                                 audio_path)
+            
+            fm = torch.cat((fm, fm_chunk), 2)
+            tm = torch.cat((tm, tm_chunk), 2)
+            df_fm.append(df_fm_chunk)
+            df_tm.append(df_tm_chunk)
+
+        feature = torch.cat((feature, fm, tm), 2)
+        df.append(df_fm)
+        df.append(df_tm)
+
+    feature = torch.squeeze(feature)
+    #feature = torch.log(feature + 1E-9)
+    # feature = (feature - torch.mean(feature)) / torch.std(feature)
+    #feature = T.AmplitudeToDB(stype='power')(feature)
+    feature = torch.transpose(feature, 0, 1) 
+
+    return feature, df
+
 def featureExtract(conf=None,mode=None):
     '''
     Training:
@@ -165,49 +231,7 @@ def featureExtract(conf=None,mode=None):
             audio_path = file.replace('csv', 'wav')
             logger.info("Processing file name {}".format(audio_path))
 
-            data, sr = torchaudio.load(audio_path)
-            resample = T.Resample(sr, conf.features.sample_rate)
-            data = resample(data)
-            data = (data - torch.mean(data)) / torch.std(data)
-
-            feature = T.MelSpectrogram(
-                n_fft=conf.features.n_fft,
-                hop_length=conf.features.hop,
-                window_fn=(torch.hamming_window),
-                power=2.0
-            )(data)
-
-            # augment features if set in config
-            if conf.set.augment:
-                logger.info('=== creating augmented features ===')
-                #time stretch direction affects amount of features/type
-                if conf.features.direction == 'up':
-                    tsu, df_tsu = aug.timeStretch(audio_path, 'up')
-                    feature = torch.cat((feature, tsu), 2)
-                    df.append(df_tsu)
-                elif conf.features.direction =='down':
-                    tsd, df_tsd = aug.timeStretch(audio_path, 'down')
-                    feature = torch.cat((feature, tsd), 2)
-                    df.append(df_tsd)
-                else:
-                    tsu, df_tsu = aug.timeStretch(audio_path, 'up')
-                    tsd, df_tsd = aug.timeStretch(audio_path, 'down')
-                    feature = torch.cat((feature, tsu, tsd), 2)
-                    df.append(df_tsu)
-                    df.append(df_tsd)
-
-                # get masking augs, add to feature
-                fm, df_fm = aug.frequencyMask(audio_path)
-                tm, df_tm = aug.timeMask(audio_path)
-                
-                feature = torch.cat((feature, fm, tm), 2)
-                df.append(df_fm)
-                df.append(df_tm)
-
-            feature = torch.squeeze(feature)
-            scale = T.AmplitudeToDB(stype='power')
-            feature = scale(feature)
-            feature = torch.transpose(feature, 0, 1) 
+            feature, df = melSpectFeature(conf, audio_path, df, aug=aug)
 
             df_pos = df[(df == 'POS').any(axis=1)]
             
@@ -230,7 +254,7 @@ def featureExtract(conf=None,mode=None):
         
         return num_extract, data_shape
     
-    else:
+    elif mode == 'val':
         logger.info("=== Processing validation set ===")
         csv_files = [file for path, _, _ in os.walk(conf.path.val_dir) 
                     for file in glob(os.path.join(path, '*.csv')) ]
@@ -276,47 +300,7 @@ def featureExtract(conf=None,mode=None):
 
             index_sup = np.where(Q_list == 'POS')[0][:conf.train.n_shot]
 
-            data, sr = torchaudio.load(audio_path)
-            resample = T.Resample(sr, conf.features.sample_rate)
-            data = resample(data)
-            data = (data - torch.mean(data)) / torch.std(data)
-            feature = T.MelSpectrogram(
-                n_fft=conf.features.n_fft,
-                hop_length=conf.features.hop,
-                window_fn=(torch.hamming_window),
-                power=2.0
-            )(data)
-
-                        # augment features if set in config
-            if conf.set.augment:
-                logger.info('=== creating augmented features ===')
-                #time stretch direction affects amount of features/type
-                if conf.features.direction == 'up':
-                    tsu, df_tsu = aug.timeStretch(audio_path, 'up')
-                    feature = torch.cat((feature, tsu), 2)
-                    df_val.append(df_tsu)
-                elif conf.features.direction =='down':
-                    tsd, df_tsd = aug.timeStretch(audio_path, 'down')
-                    feature = torch.cat((feature, tsd), 2)
-                    df_val.append(df_tsd)
-                else:
-                    tsu, df_tsu = aug.timeStretch(audio_path, 'up')
-                    tsd, df_tsd = aug.timeStretch(audio_path, 'down')
-                    feature = torch.cat((feature, tsu, tsd), 2)
-                    df_val.append(df_tsu)
-                    df_val.append(df_tsd)
-
-                # get masking augs, add to feature
-                fm, df_fm = aug.frequencyMask(audio_path)
-                tm, df_tm = aug.timeMask(audio_path)
-                feature = torch.cat((feature, fm, tm), 2)
-                df_val.append(df_fm)
-                df_val.append(df_tm)
-
-            feature = torch.squeeze(feature)
-            scale = T.AmplitudeToDB(stype='power')
-            feature = scale(feature)
-            feature = torch.transpose(feature, 0, 1) 
+            feature, df_val = melSpectFeature(conf, audio_path, df_val, aug=aug)
 
             query_idx_start = end_time[index_sup[-1]]
             negative_idx_end = feature.shape[0] - 1
@@ -404,3 +388,136 @@ def featureExtract(conf=None,mode=None):
             val_file.close()
 
         return num_extract
+    
+    else:
+        logger.info("=== Processing Test set ===")
+        csv_files = [file for path, _, _ in os.walk(conf.path.val_dir) 
+                    for file in glob(os.path.join(path, '*.csv')) ]
+        num_extract = 0
+
+        for file in csv_files:
+            positive_idx = 0
+            
+            negative_idx = 0
+            negative_start = 0
+            negative_hop = 0
+
+            query_idx = 0
+            query_start = 0
+            query_hop = 0
+
+            start_index = 0
+            end_index = 0
+
+            split_list = file.split('/')
+            filename = str(split_list[-1].split('.')[0]) + '.h5'
+            
+            # path to audio file
+            audio_path = file.replace('csv', 'wav')
+
+            # actually create val hdf5 file
+            test_file_dir = os.path.join(conf.path.test_feat, filename)
+            test_file = h5py.File(test_file_dir, 'w')
+
+            # create datasets for positive set, negative set, and query set
+            test_file.create_dataset('feat_positive', shape=(1, seg_len, conf.features.n_fft // 2 + 1),
+                          maxshape=(None, seg_len, conf.features.n_fft // 2 + 1))
+            test_file.create_dataset('feat_negative', shape=(1, seg_len, conf.features.n_fft // 2 + 1),
+                          maxshape=(None, seg_len, conf.features.n_fft // 2 + 1))
+            test_file.create_dataset('feat_query', shape=(1, seg_len, conf.features.n_fft // 2 + 1),
+                          maxshape=(None, seg_len, conf.features.n_fft // 2 + 1))
+
+            test_file.create_dataset('query_index_start',shape=(1,),maxshape=(None))
+
+            df_test = pd.read_csv(file, header=0, index_col=False)
+            Q_list = df_test['Q'].to_numpy()              
+            start_time, end_time = time2frame(df_test, fps)
+
+            index_sup = np.where(Q_list == 'POS')[0][:conf.train.n_shot]
+
+            feature, df_test = melSpectFeature(conf, audio_path, df_test, aug=False)
+
+            query_idx_start = end_time[index_sup[-1]]
+            negative_idx_end = feature.shape[0] - 1
+            test_file['query_index_start'][:] = end_time[index_sup[-1]]
+
+            logger.info('=== Processing Test File: {} ==='.format(filename))
+            logger.info('=== Creating negative dataset ===')
+            while negative_idx_end - (start_index + negative_hop) > seg_len:
+                negative_patch = feature[int(start_index + negative_hop):
+                                         int(start_index + negative_hop + seg_len)]
+                
+                test_file['feat_negative'].resize((negative_idx + 1, 
+                                                  negative_patch.shape[0],
+                                                  negative_patch.shape[1]))
+                test_file['feat_negative'][negative_idx] = negative_patch
+                
+                negative_idx += 1
+                negative_hop += hop_seg
+
+            negative_patch = feature[negative_idx_end - seg_len:negative_idx_end]
+                
+            test_file['feat_negative'].resize((negative_idx + 1, 
+                                              negative_patch.shape[0],
+                                              negative_patch.shape[1]))
+            test_file['feat_negative'][negative_idx] = negative_patch
+
+            logger.info('=== Creating positive dataset ===')
+            for index in index_sup:
+                start_index = int(start_time[index])
+                end_index = int(end_time[index])
+
+                if (end_index - start_index) > seg_len:
+                    shift = 0
+                    while end_index - (start_index + shift) > seg_len:
+                        positive_patch = feature[int(start_index + shift):
+                                                int(start_index + shift + seg_len)]
+
+                        test_file['feat_positive'].resize((positive_idx + 1,
+                                                          positive_patch.shape[0],
+                                                          positive_patch.shape[1]))
+                        test_file['feat_positive'][positive_idx] = positive_patch
+                        positive_idx += 1
+                        shift += hop_seg
+                    
+                    positive_patch = feature[end_index - seg_len:end_index]
+                    test_file['feat_positive'].resize((positive_idx + 1, 
+                                              positive_patch.shape[0],
+                                              positive_patch.shape[1]))
+                    test_file['feat_positive'][positive_idx] = positive_patch   
+                    positive_idx += 1
+
+                else:
+                    positive_patch = feature[start_index:end_index]
+
+                    if positive_patch.shape[0] == 0:
+                        logger.warning("The patch is of 0 length")
+                        continue
+                    
+                    repeat_num = int(seg_len / (positive_patch.shape[0])) + 1
+
+                    patch_new = np.tile(positive_patch, (repeat_num, 1))
+                    patch_new = patch_new[0:int(seg_len)]
+                    test_file['feat_positive'].resize((positive_idx + 1, patch_new.shape[0], patch_new.shape[1]))
+                    test_file['feat_positive'][positive_idx] = patch_new
+                    positive_idx += 1
+
+            logger.info('=== Creating query dataset ===')
+            while negative_idx_end - (query_idx_start + query_hop) > seg_len:
+                query_patch = feature[int(query_idx_start + query_hop):
+                                      int(query_idx_start + query_hop + seg_len)]
+                test_file['feat_query'].resize((query_idx + 1,
+                                               query_patch.shape[0],
+                                               query_patch.shape[1]))
+                test_file['feat_query'][query_idx] = query_patch
+                query_idx += 1
+                query_hop += hop_seg
+
+            query_patch = feature[negative_idx_end - seg_len:negative_idx_end]
+            test_file['feat_query'].resize((query_idx + 1,
+                                          query_patch.shape[0],
+                                          query_patch.shape[1]))
+            test_file['feat_query'][query_idx] = query_patch
+            
+            num_extract += len(test_file['feat_query'])
+            test_file.close()

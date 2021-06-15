@@ -1,5 +1,4 @@
 import os
-import shutil
 import logging
 import hydra
 import h5py
@@ -33,14 +32,19 @@ def main(conf: DictConfig):
     if not os.path.isdir(conf.path.eval_feat):
         os.makedirs(conf.path.eval_feat)
 
-    if conf.set.features:
+    if conf.set.features_train:
         logger.info("### Feature Extraction ###")
-        Num_extract_train, data_shape = featureExtract(conf=conf, mode="train")
+        num_extract_train, data_shape = featureExtract(conf=conf, mode="train")
         logger.info("Shape of dataset is {}".format(data_shape))
-        logger.info("Total training samples is {}".format(Num_extract_train))
+        logger.info("Total training samples is {}".format(num_extract_train))
 
-        Num_extract_eval = featureExtract(conf=conf, mode='eval')
-        logger.info("Total number of samples used for evaluation: {}".format(Num_extract_eval))
+        num_extract_eval = featureExtract(conf=conf, mode='val')
+        logger.info("Total number of samples used for evaluation: {}".format(num_extract_eval))
+        logger.info("### Feature Extraction Complete ###")
+    
+    if conf.set.features_test:
+        num_extract_test = featureExtract(conf=conf, mode='test')
+        logger.info("Total number of samples used for testing: {}".format(num_extract_test))
         logger.info("### Feature Extraction Complete ###")
 
     if conf.set.train:
@@ -95,7 +99,7 @@ def main(conf: DictConfig):
         onset_array = np.array([])
         offset_array = np.array([])
 
-        feature_files = [file for file in glob(os.path.join(conf.path.eval_feat, '*.h5'))]
+        feature_files = [file for file in glob(os.path.join(conf.path.test_feat, '*.h5'))]
         for file in feature_files:
             feature_name = file.split('/')[-1]
             audio_name = feature_name.replace('h5', 'wav')

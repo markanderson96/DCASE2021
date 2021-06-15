@@ -1,45 +1,54 @@
 set:
-  augment: false
-  features: false
+  features_train: false
+  features_test: false
   train: false
   eval: false
-  gpus: 1 # 0 to use CPU
+  gpus: 1
 
 path:
   root_dir: /home/manderson/DCASE2021
   data_dir: ${path.root_dir}/data
   train_dir: ${path.data_dir}/Development_Set/Training_Set
-  val_dir:  ${path.data_dir}/Development_Set/Validation_Set
+  val_dir: ${path.data_dir}/Development_Set/Validation_Set
+  test_dir: ${path.data_dir}/Development_Set/Validation_Set
   feat_path: ${path.root_dir}/features
   train_feat: ${path.feat_path}/feat_train
-  eval_feat:  ${path.feat_path}/feat_eval
+  eval_feat: ${path.feat_path}/feat_eval
+  test_feat: ${path.feat_path}/feat_test
   model: ${path.root_dir}/models
   best_model: ${path.model}/best_model.ckpt
   last_model: ${path.model}/last_model.ckpt
 
 features:
-  freq_mask: 10
-  time_mask: 5
+  freq_mask: 20
+  time_mask: 20
   time_stretch: 0.05
   direction: bidirectional
-  seg_len: 0.200
-  hop_seg: 0.050
+  seg_len: 0.2
+  hop_seg: 0.05
   sample_rate: 22050
-  n_fft: 512
+  n_mel: 128
+  n_fft: 1024
   hop: 256
 
 train:
   n_shot: 5
   k_way: 10
-  epochs: 100
-  lr: 0.001
-  momentum: 0.8
-  threshold: 0.01
+  epochs: 150
+  lr: 0.01
+  momentum: 0.85
+  factor: 0.5
+  threshold: 0.001
   patience: 5
 
 eval:
   samples_neg: 650
-  iterations: 3
+  iterations: 5
   query_batch_size: 8
-  negative_set_batch_size : 16
-  threshold: 0.55
+  query_set_size: null
+  negative_set_batch_size: 16
+  threshold: 0.5
+
+post_proc:
+  path: ${path.val_dir}
+  threshold: 0.6

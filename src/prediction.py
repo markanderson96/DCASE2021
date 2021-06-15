@@ -41,10 +41,11 @@ def eval_prototypes(conf=None,hdf_eval=None,strt_index_query=None):
     num_batch_query = len(Y_query) // conf.eval.query_batch_size
 
     query_dataset = torch.utils.data.TensorDataset(X_query, Y_query)
-    q_loader = torch.utils.data.DataLoader(dataset=query_dataset, batch_sampler=None,batch_size=conf.eval.query_batch_size,shuffle=False)
-    q_set_size = X_query.shape[1] * X_query.shape[2]
-    #breakpoint()
-    query_set_feat = torch.zeros(0, 3968).cpu()
+    q_loader = torch.utils.data.DataLoader(dataset=query_dataset, 
+                                           batch_sampler=None,
+                                           batch_size=conf.eval.query_batch_size,
+                                           shuffle=False)
+    query_set_feat = torch.zeros(0, 1920).cpu()
 
 
     Model = Protonet(conf)
@@ -101,13 +102,14 @@ def eval_prototypes(conf=None,hdf_eval=None,strt_index_query=None):
     
     prob_final = np.mean(np.array(prob_comb),axis=0)
 
-    #breakpoint()
+    
 
-    krn = np.array([1, 0 -1])
+    krn = np.array([1, -1])
     prob_thresh = np.where(prob_final > conf.eval.threshold, 1, 0)
+    prob_med_filt = medFilt(prob_thresh, 5)
 
     prob_pos_final = prob_final * prob_thresh
-    changes = np.convolve(krn, prob_thresh)
+    changes = np.convolve(krn, prob_med_filt)
 
     onset_frames = np.where(changes == 1)[0]
     offset_frames = np.where(changes == -1)[0]
@@ -150,3 +152,32 @@ def get_probability(x_pos,neg_proto,query_set_out):
     prob_pos = prob[:,0]
     
     return prob_pos.detach().cpu().tolist()
+
+def medFilt(detections, median_window):
+    """ Median Filter to smooth out activations
+    
+        Args:
+            * self - use member class variables
+            * datdetectedWindows - data to be processed
+        Returns:
+            * Median Filtered activations """
+
+    if median_window % 2 == 0:
+        median_window = median_window - 1
+
+    x = detections
+    k = median_window
+
+    assert k % 2 == 1, "Median filter length must be odd"
+    assert x.ndim == 1, "Input must be one dimensional"
+    k2 = (k - 1) // 2
+    y = np.zeros((len(x), k), dtype=x.dtype)
+    y[:, k2] = x
+    for i in range(k2):
+        j = k2 - i
+        y[j:, i] = x[:-j]
+        y[:j, i] = x[0]
+        y[:-j, -(i + 1)] = x[j:]
+        y[-j:, -(i + 1)] = x[-1]
+
+    return np.median(y, axis=1)

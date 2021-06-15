@@ -12,7 +12,7 @@ class Augementation():
     def __init__(self, conf=None) -> None:
         self.conf = conf
 
-    def frequencyMask(self, file):
+    def frequencyMask(self, spectrogram, file):
         # create copy of labels for new file
         df = pd.read_csv(file.replace('wav', 'csv'), 
                          header=0, 
@@ -21,16 +21,7 @@ class Augementation():
         
         # load file and perform timeMask
         filename = os.path.basename(file)
-        data, sr = torchaudio.load(file)
-        resample = T.Resample(sr, self.conf.features.sample_rate)
-        data = resample(data)
-        spectrogram = T.MelSpectrogram(
-            n_fft=self.conf.features.n_fft,
-            hop_length=self.conf.features.hop,
-            window_fn=(torch.hamming_window),
-            power=2.0
-        )
-        data_spec = spectrogram(data)
+        data_spec = spectrogram
         frequency_mask = T.FrequencyMasking(freq_mask_param=self.conf.features.freq_mask)
         data_mask = frequency_mask(data_spec)
 
@@ -39,7 +30,7 @@ class Augementation():
 
         return data_mask, new_labels
 
-    def timeMask(self, file): 
+    def timeMask(self, spectrogram, file): 
         # create copy of labels for new file
         df = pd.read_csv(file.replace('wav', 'csv'), 
                          header=0, 
@@ -48,16 +39,7 @@ class Augementation():
         
         # load file and perform timeMask
         filename = os.path.basename(file)
-        data, sr = torchaudio.load(file)
-        resample = T.Resample(sr, self.conf.features.sample_rate)
-        data = resample(data)
-        spectrogram = T.MelSpectrogram(
-            n_fft=self.conf.features.n_fft,
-            hop_length=self.conf.features.hop,
-            window_fn=(torch.hamming_window),
-            power=2.0
-        )
-        data = spectrogram(data)
+        data = spectrogram
         time_mask = T.TimeMasking(time_mask_param=self.conf.features.time_mask)
         data_mask = time_mask(data)
 

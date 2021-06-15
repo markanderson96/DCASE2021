@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 
@@ -27,8 +27,7 @@ class Protonet(pl.LightningModule):
         self.encoder = nn.Sequential(
             conv_block(1, 128),
             conv_block(128, 128),
-            conv_block(128, 128),
-            #conv_block(128, 128)
+            conv_block(128, 128)
         )
     
     def forward(self, x):
@@ -105,18 +104,57 @@ class Protonet(pl.LightningModule):
         return {'log':log}
     
     def configure_optimizers(self):
-        optimiser = torch.optim.SGD(self.parameters(), 
+        optimizer = torch.optim.SGD(self.parameters(), 
                                     lr=self.conf.train.lr, 
                                     momentum=self.conf.train.momentum)
-        
 
-        lr_scheduler = {'scheduler': ReduceLROnPlateau(optimiser,
+        # lr_scheduler = StepLR(optimizer=optimizer, 
+        #                       gamma=self.conf.train.gamma,
+        #                       step_size=self.conf.train.scheduler_step_size)
+        lr_scheduler = {'scheduler': ReduceLROnPlateau(optimizer,
+                                                       factor=self.conf.train.factor,
                                                        patience=self.conf.train.patience,
                                                        verbose=True),
-                         'monitor': 'val_loss'
+                        'monitor': 'val_loss'
         }
 
-        return {'optimizer':optimiser, 'lr_scheduler': lr_scheduler}
+        return {'optimizer':optimizer, 'lr_scheduler': lr_scheduler}
+
+    # # learning rate warm-up
+    # def optimizer_step(
+    #     self, epoch, batch_idx, optimizer, optimizer_idx, optimizer_closure,
+    #     on_tpu=False, using_native_amp=False, using_lbfgs=False
+    # ):
+
+    #     # skip the first 500 steps
+    #     if self.trainer.global_step in range(1, 500):
+    #         lr_scale = min(1., float(self.trainer.global_step + 1) / 500.)
+    #         for pg in optimizer.param_groups:
+    #             pg['lr'] = lr_scale * pg.get('lr')
+                
+
+    #     # hold lr
+    #     if self.trainer.global_step in range(500, 10000):
+    #         for pg in optimizer.param_groups:
+    #             pg['lr'] = pg.get('lr')
+                
+
+    #     # decay lr exponentially
+    #     if self.trainer.global_step in range(10000, 80000):
+    #         if (self.trainer.global_step % 10) == 0:
+    #             for pg in optimizer.param_groups:
+    #                 pg['lr'] = self.conf.train.gamma * pg.get('lr')
+                    
+
+    #     # hold lr again
+    #     if self.trainer.global_step >= 80000:
+    #         for pg in optimizer.param_groups:
+    #             pg['lr'] = pg.get('lr')
+                
+    #     lr = np.mean([pg['lr'] for pg in optimizer.param_groups])
+    #     self.log('lr', lr)
+    #     # update params
+    #     optimizer.step(closure=optimizer_closure)
 
     def get_progress_bar_dict(self):
         # don't show the version number
